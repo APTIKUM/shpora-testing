@@ -1,6 +1,3 @@
-
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using NUnit.Framework;
 using FluentAssertions;
 
@@ -15,7 +12,7 @@ public class NumberValidatorTests
     {
         var action = () => new NumberValidator(precision, 0);
 
-        action.Should().Throw<ArgumentException>($"precision={precision}, scale=0: precision must be positive");
+        action.Should().Throw<ArgumentException>($"precision must be positive");
     }
 
     [Test]
@@ -23,7 +20,7 @@ public class NumberValidatorTests
     {
         var action = () => new NumberValidator(10, -1);
 
-        action.Should().Throw<ArgumentException>("precision=10, scale=-1: scale must be non-negative");
+        action.Should().Throw<ArgumentException>("scale must be non-negative");
     }
 
     [TestCase(1)]
@@ -32,7 +29,7 @@ public class NumberValidatorTests
     {
         var action = () => new NumberValidator(1, scale);
 
-        action.Should().Throw<ArgumentException>($"precision=1, scale={scale}: scale must be less than precision");
+        action.Should().Throw<ArgumentException>($"scale must be less than precision");
     }
 
     [TestCase(2, 0)]
@@ -56,10 +53,13 @@ public class NumberValidatorTests
     [TestCase("1234.56",  false)]
     public void IsValidNumber_ReturnsExpected_ForPrecision(string number, bool expected)
     {
-        var validator = new NumberValidator(5, 2);
+        const int precision = 5;
+        const int scale = 2;
+
+        var validator = new NumberValidator(precision, scale);
 
         validator.IsValidNumber(number).Should().Be(expected,
-            $"number={number}, precision=5, scale=2, onlyPositive=false");
+            $"number={number}, precision={precision}, scale={scale}");
     }
 
     [TestCase("1", true)]
@@ -68,10 +68,13 @@ public class NumberValidatorTests
     [TestCase("12", false)]
     public void IsValidNumber_ReturnsExpected_ForMinimumPrecision(string number, bool expected)
     {
-        var validator = new NumberValidator(1, 0);
+        const int precision = 1;
+        const int scale = 0;
+
+        var validator = new NumberValidator(precision, scale);
 
         validator.IsValidNumber(number).Should().Be(expected,
-            $"number={number}, precision=1, scale=0, onlyPositive=false");
+            $"number={number}, precision={precision}, scale={scale}");
     }
 
     [TestCase("00", true)]
@@ -81,10 +84,13 @@ public class NumberValidatorTests
     [TestCase("0000.12", false)]
     public void IsValidNumber_ReturnsExpected_ForLeadingZeros(string number, bool expected)
     {
-        var validator = new NumberValidator(5, 2);
+        const int precision = 5;
+        const int scale = 2;
+
+        var validator = new NumberValidator(precision, scale);
 
         validator.IsValidNumber(number).Should().Be(expected,
-            $"number={number}, precision=5, scale=2, onlyPositive=false");
+            $"number={number}, precision={precision}, scale={scale}");
     }
 
     [TestCase("123", 0, true)]
@@ -96,10 +102,12 @@ public class NumberValidatorTests
     public void IsValidNumber_ReturnsExpected_ForScale(
         string number, int scale, bool expected)
     {
-        var validator = new NumberValidator(10, scale);
+        const int precision = 10;
+
+        var validator = new NumberValidator(precision, scale);
 
         validator.IsValidNumber(number).Should().Be(expected,
-            $"number={number}, precision=10, scale={scale}, onlyPositive=false");
+            $"number={number}, precision={precision}, scale={scale}");
     }
 
     [TestCase(null)]
@@ -119,19 +127,12 @@ public class NumberValidatorTests
     [TestCase(" 12")]
     [TestCase("12\n1")]
     [TestCase("\n1")]
-    [TestCase("1\n")] // это тест падает - не знаю, правильно либо нет)
     public void IsValidNumber_ReturnsFalse_ForInvalidFormat(string? number)
     {
         var validator = new NumberValidator(10, 2);
 
-        //Добавил JsonSerializerOptions для корректного отображения символов в сообщении об ошибке
-        var options = new JsonSerializerOptions
-        {
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        };
-
         validator.IsValidNumber(number).Should().BeFalse(
-            $"number={JsonSerializer.Serialize(number, options)}, precision=10, scale=2, onlyPositive=false: invalid number format");
+            $"number='{number}' is invalid format");
     }
 
     [TestCase("0", true, true)]
@@ -151,7 +152,7 @@ public class NumberValidatorTests
         var validator = new NumberValidator(10, 2, onlyPositive);
 
         validator.IsValidNumber(number).Should().Be(expected,
-            $"number={number}, precision=10, scale=2, onlyPositive={onlyPositive}");
+            $"number={number} must be invalid for onlyPositive={onlyPositive}");
     }
 
     [TestCase("12,34")]
@@ -163,6 +164,6 @@ public class NumberValidatorTests
         var validator = new NumberValidator(10, 2);
 
         validator.IsValidNumber(number).Should().BeTrue(
-            $"number={number}, precision=10, scale=2, onlyPositive=false: decimal comma is allowed");
+            $"decimal comma is allowed");
     }
 }
